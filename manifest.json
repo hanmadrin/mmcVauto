@@ -1,0 +1,29 @@
+{
+    "name": "Vauto",
+    "description": "Automated Vauto checker",
+    "version": "1.0",
+    "manifest_version": 3,
+    "permissions": [
+        "activeTab",
+        "storage",
+        "unlimitedStorage",
+        "tabs",
+        "cookies"
+    ],
+    "content_scripts":[
+        {
+            "matches": [
+                "https://vauto.signin.coxautoinc.com/*",
+                "https://www2.vauto.com/Va/Misc/Interstitial/*",
+                "https://www2.vauto.com/Va/Appraisal/List.aspx",
+                "https://www2.vauto.com/Va/Appraisal/Default.aspx"
+            ],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        }
+    ],
+    "background": {
+        "service_worker": "service.js",
+        "type": "module"
+    }
+}
