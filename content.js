@@ -742,7 +742,7 @@ const dynamicAppraisal = async(info)=>{
     const provisionPriceValue = document.querySelector('tr.primaryPrice.averagePrice>td.value:last-child').textContent;
     const jdPrice = document.querySelector('#ext-gen419 .priceTypeSummary.primary table.total td.value').textContent;
     const kbbPriceValue = document.querySelector('td.basePriceRanged').textContent;
-    const mmrPrice = document.querySelector('#ext-gen444 .priceTypeSummary.primary table.total td.value').textContent;
+    
 
 
     const digitPattern = /\d+/g;
@@ -750,6 +750,7 @@ const dynamicAppraisal = async(info)=>{
     const jdPriceValue = jdPrice.match(/\d+/g).join('');
     let mmrPriceValue = '0';
     try{
+        const mmrPrice = document.querySelector('#ext-gen444 .priceTypeSummary.primary table.total td.value').textContent;
         mmrPriceValue = mmrPrice.match(/\d+/g).join('');
     }catch(e){
         mmrPriceValue= '0';
