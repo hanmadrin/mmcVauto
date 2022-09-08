@@ -778,6 +778,11 @@ const dynamicAppraisal = async(info)=>{
     //accident count- All titles - Appraised Value  -  Seller price 
     let autocheckValues = await autocheckResults(vin);
     if(autocheckValues==null){
+        await sleep(5000);
+        autocheckValues = await autocheckResults(vin);
+    }
+    if(autocheckValues==null){
+        await sleep(5000);
         autocheckValues = await autocheckResults(vin);
     }
     if(autocheckValues==null){
