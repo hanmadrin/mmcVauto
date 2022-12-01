@@ -16,13 +16,3 @@ class ChromeStorage{
         });
     }
 }
-const mondayItemDB = new ChromeStorage('mondayItem');
-const mondayItemVinDB = new ChromeStorage('mondayItemVins');
-(async () => {
-    const db = await mondayItemDB.GET();
-    console.log(db);
-    await mondayItemDB.SET(null);
-    await mondayItemVinDB.SET([]);
-    const db2 = await mondayItemDB.GET();
-    console.log(db2);
-})();

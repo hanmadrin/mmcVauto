@@ -17,7 +17,7 @@ class ChromeStorage{
     }
 }
 const mondayItemDB = new ChromeStorage('mondayItem');
-const mondayItemVinDB = new ChromeStorage('mondayItemVins');
+// const mondayItemVinDB = new ChromeStorage('mondayItemVins');
 
 const urls = {
     appraisal: 'https://www2.vauto.com/Va/Appraisal/Default.aspx',
@@ -869,21 +869,9 @@ const dynamicAppraisal = async(info)=>{
     // vehicleDescriptionInput.value = ;
     return result;
 }
-// {
-//     "id": "numbers34",
-//     "title": "Ave Mkt Price$",
-//     "value": null
-//   },
-//   {
-//     "id": "numbers_12",
-//     "title": "JDP $",
-//     "value": null
-//   },
-//   {
-//     "id": "numbers_2",
-//     "title": "Ave $ MMR",
-//     "value": null
-//   },
+
+
+
 const validItemTitles = [
     'Vin#',
     'MMC Offer$',
@@ -941,8 +929,10 @@ const mondayFetch = async (query) => {
     );
     return await mondayResponse.json();
 }
-const getItemFromMonday = async () => {
+const getItemFromMonday = async (item_id) => {
+    // const getNewItemId = await fetch('');
     const boardId = globalData.boardId;
+
     const itemQuery = `
         query{
             items_by_column_values (board_id: ${boardId}, column_id: "status", column_value: "Auto Vin",limit:1) {
@@ -981,6 +971,43 @@ const getItemFromMonday = async () => {
         }
     }
 }
+const getSingleItemFromMonday = async(id)=>{
+    const query = `
+        query{
+            boards(ids:[1255820475]){
+                items(ids:[${id}]){
+                    column_values(){
+                        value,
+                        title
+                    }
+                }
+            }
+        }
+    `;
+    const mondayResponse = await mondayFetch(query);
+    const items = mondayResponse.data.boards[0].items;
+    if(items.length==0){
+        window.location.reload();
+    }else{
+        const item = items[0];
+        const columnValues = item.column_values;
+        const validItemValues = {};
+        for(let i=0;i<columnValues.length;i++){
+            if(validItemTitles.includes(columnValues[i].title)){
+                validItemValues[columnValues[i].title] = columnValues[i].value;
+            }
+        }
+        const keys = Object.keys(validItemValues);
+        for(let i=0;i<keys.length;i++){
+            validItemValues[keys[i]] = JSON.parse(validItemValues[keys[i]]);
+        }
+        validItemValues.id = id;
+        console.log(validItemValues);
+        await mondayItemDB.SET(validItemValues);
+        return validItemValues;
+    }
+
+};
 const updateItemToMonday = async(updateData)=>{
     const boardId = globalData.boardId;
     const itemId = (await mondayItemDB.GET()).id;
@@ -1035,41 +1062,24 @@ const calculateMondayItemRawVin = async () => {
     const vehicle = mondayItem['Vehicle'];
     const series = mondayItem['Series'];
     const url = mondayItem['URL'];
-    const localVins = await mondayItemVinDB.GET();
+    // const localVins = await mondayItemVinDB.GET();
     // const done = mondayItem['BOT Status'];
-    const done = localVins.includes(vin);
-    if(!done){
-        if(mondayItem.status=='Auto Vin'){
-            if(typeof vin=='string' && typeof mileage == 'string' && typeof state == 'string' && typeof sellerPrice == 'string'){
-                if(vin.length == 17){
-                    if(mileage.length>0 && state.length>0 && sellerPrice.length>0){
-                        result.vin = vin;
-                        result.mileage = mileage;
-                        result.state = state;
-                        result.sellerPrice = sellerPrice;
-                        result.vehicle = vehicle;
-                        result.series = series;
-                        result.url = url;
-                        result.suggest = true;
-                        return result;  
-                    }else{
-                        return {
-                            suggest: false,
-                            data: {
-                                'updates': 'VIN / Mileage / State / Price / vehicle is(are) empty',
-                                'status': 'Empty Value'
-                            }
-                        };
-                    }
-                }else{
-                    return {
-                        suggest: false,
-                        data: {
-                            'updates': 'VIN / Mileage / State / Price/ Vehicle is(are) empty',
-                            'status': 'Invalid Vin'
-                        }
-                    };
-                }
+    // const done = localVins.includes(vin);
+    // const done = false;
+    // if(!done){
+    // if(mondayItem.status=='Auto Vin'){
+    if(typeof vin=='string' && typeof mileage == 'string' && typeof state == 'string' && typeof sellerPrice == 'string'){
+        if(vin.length == 17){
+            if(mileage.length>0 && state.length>0 && sellerPrice.length>0){
+                result.vin = vin;
+                result.mileage = mileage;
+                result.state = state;
+                result.sellerPrice = sellerPrice;
+                result.vehicle = vehicle;
+                result.series = series;
+                result.url = url;
+                result.suggest = true;
+                return result;  
             }else{
                 return {
                     suggest: false,
@@ -1079,32 +1089,215 @@ const calculateMondayItemRawVin = async () => {
                     }
                 };
             }
+        }else{
+            return {
+                suggest: false,
+                data: {
+                    'updates': 'VIN / Mileage / State / Price/ Vehicle is(are) empty',
+                    'status': 'Invalid Vin'
+                }
+            };
         }
     }else{
-        console.log('neglecting cause monday sent it again');
         return {
             suggest: false,
-            data: {}
+            data: {
+                'updates': 'VIN / Mileage / State / Price / vehicle is(are) empty',
+                'status': 'Empty Value'
+            }
         };
     }
+    // }
+    // }else{
+    //     console.log('neglecting cause monday sent it again');
+    //     return {
+    //         suggest: false,
+    //         data: {}
+    //     };
+    // }
 }
 
 
+const fixedData = {
+    metaInformation:{
+        deviceId:{
+            title: 'Device Id',
+            type: 'text',
+            defaultValue: '',
+            point: 'value',
+            interactive: true,
+            requiredToStart: true,
+        },
+        defaultAPI:{
+            title: 'Default API',
+            type: 'text',
+            defaultValue: 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjE3MjU1MTMxNiwidWlkIjozMDI3MzE5NCwiaWFkIjoiMjAyMi0wNy0yN1QyMzowMzowNC4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6ODg0NzExMCwicmduIjoidXNlMSJ9.OsVnuCUSnm-FF21sjAND10cWEKN9-UIqIkNx6Rz8Bfo',
+            point: 'value',
+            interactive: true,
+            requiredToStart: true,
+        },
+        domain:{
+            title: 'Domain',
+            type: 'text',
+            defaultValue: 'https://xentola.com',
+            point: 'value',
+            interactive: true,
+            requiredToStart: true,
+        },
+    },
+    workingSelectors:{
+        content:{
+            console: 'CONTENT_CONSOLE',
+        },
+    }
+};
 
 
-
-
-
-
-
-(async () => {
-    if(await mondayItemVinDB.GET()==null){
-        await mondayItemVinDB.SET([]);
-    }else{
-        if(await mondayItemVinDB.GET().length>5){
-            await mondayItemVinDB.SET([]);
+const setupConsoleBoard= ()=>{
+    const consoleBoard = document.createElement('div');
+    consoleBoard.id = fixedData.workingSelectors.content.console;
+    dragElement(consoleBoard);
+    function dragElement(elmnt) {
+        var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        if (document.getElementById(elmnt.id + "header")) {
+        document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+        } else {
+        elmnt.onmousedown = dragMouseDown;
+        }
+    
+        function dragMouseDown(e) {
+        e = e || window.event;
+        // e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+        }
+    
+        function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        }
+    
+        function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
         }
     }
+    document.body.appendChild(consoleBoard);
+}
+const showDataOnConsole= (data)=>{
+    const consoleBoard = document.getElementById(fixedData.workingSelectors.content.console);
+    const content = document.createElement('div');
+    content.classList.add('font-sub');
+    content.innerText = data;
+    consoleBoard.appendChild(content);
+    console.log(data);
+}
+
+const serverResponse = async ({directory,item_ids=[]}) => {
+    const metaInformationDB = new ChromeStorage('metaInformation');
+    const metaInformation = await metaInformationDB.GET();
+    const deviceId = metaInformation.deviceId;
+    const domain = metaInformation.domain;
+    console.log(`${domain}/vauto/${directory}`);
+    const responseJSON = await fetch(
+        `${domain}/vauto/${directory}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                deviceId,
+                item_ids: item_ids
+            }),
+        }
+    );
+    const response = await responseJSON.json();
+    return response;
+}
+const getAutoVinIds = async()=>{
+    const query = `
+        query{
+            boards(ids:[1255820475]){
+                items(limit:1000){
+                    id
+                    column_values(ids:["status"]){
+                        value,
+                    }
+                }
+            }
+        }
+    `;
+    const response = await mondayFetch(query);
+    const data = response.data.boards[0].items;
+    // ids that has status Auto VIn
+    const itemsFiltered = data.filter(item=>(JSON.parse(item.column_values[0].value)).index == 105).map(item=>item.id);
+    return itemsFiltered;
+}
+
+const popupSetup = async () => {
+    console.log('popup');
+    document.body.id ="POPUP";
+    const metas = fixedData.metaInformation;
+    const popupMetaDB = new ChromeStorage('metaInformation');
+    let popupMetaValues = await popupMetaDB.GET();
+    popupMetaValues = popupMetaValues==null?{}:popupMetaValues;
+    const metaKeys = Object.keys(metas);
+    for(let i=0;i<metaKeys.length;i++){
+        const metaKey = metaKeys[i];
+        const meta = metas[metaKey];
+        if(meta.interactive==true){
+            const label = document.createElement('label');
+            label.innerText = meta.title;
+            const input = document.createElement('input');
+            input.setAttribute('type', meta.type);
+            input.setAttribute('id', metaKey);
+            // input.setAttribute('placeholder', meta.title);
+            // input.setAttribute(meta.point, meta.defaultValue);
+            if(popupMetaValues[metaKey]==null){
+                popupMetaValues[metaKey] = meta.defaultValue;
+            }
+            input[meta.point] = popupMetaValues[metaKey];
+            document.body.append(label,input);
+        }else{
+            // readd only
+            const label = document.createElement('label');
+            label.innerText = `${meta.title}: ${popupMetaValues[metaKey]}`;
+            document.body.append(label);
+        }
+    }
+    const saveButton = document.createElement('button');
+    saveButton.innerText = 'Save';
+    saveButton.addEventListener('click', async ()=>{
+        for(let i=0;i<metaKeys.length;i++){
+            if(metas[metaKeys[i]].interactive==true){
+                const metaKey = metaKeys[i];
+                const meta = metas[metaKey];
+                popupMetaValues[metaKey] = document.getElementById(metaKey)[meta.point];
+            }
+        }
+        await popupMetaDB.SET(popupMetaValues);
+        window.close();
+    });
+    document.body.appendChild(saveButton);
+};
+const contentSetup = async () => {
+    setupConsoleBoard();
+    // if(await mondayItemVinDB.GET()==null){
+    //     await mondayItemVinDB.SET([]);
+    // }else{
+    //     if(await mondayItemVinDB.GET().length>5){
+    //         await mondayItemVinDB.SET([]);
+    //     }
+    // }
 
     await sleep(2000);
     console.log(pageByUrl());
@@ -1135,27 +1328,56 @@ const calculateMondayItemRawVin = async () => {
         window.location.href=urls.appraisal;
     }
     if(pageByUrl()=='appraisal'){
+        // 
+        const mondayItemExits = await mondayItemDB.GET() != null;
+        if(!mondayItemExits){
+            console.log('no item in local db');
+            let newItem = await serverResponse({directory:'getNewItemId'});
+            // while(true){
+            if(newItem.action=='setDeviceId'){
+                showDataOnConsole('setDeviceId');
+                return false;
+            }else if(newItem.action=='tryLaterAgain'){
+                showDataOnConsole('waiting...');
+                await sleep(300*1000);
+                window.location.reload();
+                return false;
+            }else if(newItem.action=='workOnItem'){
+                const item_id = newItem.item_id;
+                await getSingleItemFromMonday(item_id);
+            }else if(newItem.action=='collectNewItem'){
+                const item_ids = await getAutoVinIds();
+                const response = await serverResponse({directory:'uploadNewItems',item_ids});
+                window.location.reload();
+            }
+                // await sleep(1000);
+            // }
+            // await getItemFromMonday();
+            // console.log('item got from monday');
+        }
+        // 
         await sleep(5000);
         window.onbeforeunload=null; 
         const overlay = document.getElementById('walkme-overlay-all');
         if(overlay!=null){
             window.location.href=urls.appraisal;
         }
-        const mondayItemExits = await mondayItemDB.GET() != null;
-        if(!mondayItemExits){
-            console.log('no item in local db');
-            await getItemFromMonday();
-            console.log('item got from monday');
-        }
+        // const mondayItemExits = await mondayItemDB.GET() != null;
+        // if(!mondayItemExits){
+        //     console.log('no item in local db');
+        //     await getItemFromMonday();
+        //     console.log('item got from monday');
+        // }
+
         const itemResult = await calculateMondayItemRawVin();
         if(itemResult.suggest){
             console.log('item suggested');
             const appraisalResult =  await dynamicAppraisal(itemResult);
             console.log(appraisalResult);
             await updateItemToMonday(appraisalResult);
-            const localVins = await mondayItemVinDB.GET();
-            localVins.push(itemResult.vin);
-            await mondayItemVinDB.SET(localVins);
+            // const localVins = await mondayItemVinDB.GET();
+            // localVins.push(itemResult.vin);
+            // await mondayItemVinDB.SET(localVins);
             console.log('item updated');
             if(!(appraisalResult.status =='Invalid Vin' || appraisalResult.status =='Manual')){
                 const appraisalPageActionButton = document.getElementById('ext-gen72');
@@ -1165,7 +1387,7 @@ const calculateMondayItemRawVin = async () => {
                 finalizeButton.click();
                 await sleep(5000);
                 document.querySelector('#create-inventory-dlg .x-toolbar-cell:nth-child(3) button').click();
-                // await sleep(10000);
+                await sleep(10000);
             }
 
         }else{
@@ -1173,7 +1395,7 @@ const calculateMondayItemRawVin = async () => {
             await updateItemToMonday(itemResult.data);
         } 
         await mondayItemDB.SET(null);
-        await sleep(60000);
+        // await sleep(60000);
         window.onbeforeunload=null; 
         window.onbeforeunload=null; 
         window.location.href = urls.appraisal;
@@ -1193,11 +1415,31 @@ const calculateMondayItemRawVin = async () => {
         // });
         // console.log(appraisalResult);
     }
-})();
+};
+const backgroundSetup = async () => {
+    const mondayItemDB = new ChromeStorage('mondayItem');
+    const mondayItemVinDB = new ChromeStorage('mondayItemVins');
+    const db = await mondayItemDB.GET();
+    console.log(db);
+    await mondayItemDB.SET(null);
+    await mondayItemVinDB.SET([]);
+    const db2 = await mondayItemDB.GET();
+    console.log(db2);
+};
+(async ()=>{
+    if(typeof window=== 'undefined'){
+        console.log('background');
+        await backgroundSetup();
+    }else{
+        if(window.location.href.includes('chrome-extension')){
+           
+            await popupSetup();
+        }else{
 
-
-
-    
+            await contentSetup();
+        }
+    }
+})(); 
 
 
 

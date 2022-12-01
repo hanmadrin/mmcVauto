@@ -10,6 +10,9 @@
         "tabs",
         "cookies"
     ],
+    "action": {
+        "default_popup": "popup.html"
+    },
     "content_scripts":[
         {
             "matches": [
@@ -23,7 +26,7 @@
         }
     ],
     "background": {
-        "service_worker": "service.js",
+        "service_worker": "content.js",
         "type": "module"
     }
 }
