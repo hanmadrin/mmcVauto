@@ -202,6 +202,7 @@ const getEstDate = ()=>{
     });
 }
 const dynamicAppraisal = async(info)=>{
+    
     const vin = info.vin;
     const mileage = info.mileage;
     const state = info.state;
@@ -1371,7 +1372,22 @@ const contentSetup = async () => {
 
         const itemResult = await calculateMondayItemRawVin();
         if(itemResult.suggest){
+            
             console.log('item suggested');
+            const markAsManual = document.createElement('button');
+            markAsManual.innerText = 'Mark as Manual';
+            const consoleBoard = document.getElementById(fixedData.workingSelectors.content.console);
+            consoleBoard.append(markAsManual);
+            markAsManual.addEventListener('click', async ()=>{
+                await updateItemToMonday({
+                    'updates': `-Manual- Couldn't get autocheck values`,
+                    'status': 'Manual',
+                });
+                document.getElementById('ext-gen74').click();
+                await sleep(5000);
+                await mondayItemDB.SET(null);
+                window.location.reload();
+            });
             const appraisalResult =  await dynamicAppraisal(itemResult);
             console.log(appraisalResult);
             await updateItemToMonday(appraisalResult);
