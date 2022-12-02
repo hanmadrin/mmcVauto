@@ -1331,6 +1331,7 @@ const contentSetup = async () => {
     if(pageByUrl()=='appraisal'){
         // 
         const mondayItemExits = await mondayItemDB.GET() != null;
+        const consoleBoard = document.getElementById(fixedData.workingSelectors.content.console);
         if(!mondayItemExits){
             console.log('no item in local db');
             let newItem = await serverResponse({directory:'getNewItemId'});
@@ -1340,13 +1341,16 @@ const contentSetup = async () => {
                 return false;
             }else if(newItem.action=='tryLaterAgain'){
                 showDataOnConsole('waiting...');
+                consoleBoard.style.backgroundColor = 'yellow';
                 await sleep(300*1000);
                 window.location.reload();
                 return false;
             }else if(newItem.action=='workOnItem'){
+                consoleBoard.style.backgroundColor = 'green';
                 const item_id = newItem.item_id;
                 await getSingleItemFromMonday(item_id);
             }else if(newItem.action=='collectNewItem'){
+                // consoleBoard.style.backgroundColor = 'yellow';
                 const item_ids = await getAutoVinIds();
                 const response = await serverResponse({directory:'uploadNewItems',item_ids});
                 window.location.reload();
@@ -1380,7 +1384,7 @@ const contentSetup = async () => {
             consoleBoard.append(markAsManual);
             markAsManual.addEventListener('click', async ()=>{
                 await updateItemToMonday({
-                    'updates': `-Manual- Couldn't get autocheck values`,
+                    'updates': `-Manual- Cannot Process`,
                     'status': 'Manual',
                 });
                 document.getElementById('ext-gen74').click();
@@ -1388,7 +1392,12 @@ const contentSetup = async () => {
                 await mondayItemDB.SET(null);
                 window.location.reload();
             });
-            const appraisalResult =  await dynamicAppraisal(itemResult);
+            let appraisalResult;
+            try{
+                appraisalResult =  await dynamicAppraisal(itemResult);
+            }catch(e){
+                consoleBoard.style.backgroundColor = 'red';
+            }
             console.log(appraisalResult);
             await updateItemToMonday(appraisalResult);
             // const localVins = await mondayItemVinDB.GET();
