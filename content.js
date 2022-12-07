@@ -1397,6 +1397,7 @@ const contentSetup = async () => {
                 appraisalResult =  await dynamicAppraisal(itemResult);
             }catch(e){
                 consoleBoard.style.backgroundColor = 'red';
+                return false;
             }
             console.log(appraisalResult);
             await updateItemToMonday(appraisalResult);
