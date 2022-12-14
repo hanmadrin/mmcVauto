@@ -1243,7 +1243,36 @@ const getAutoVinIds = async()=>{
     const itemsFiltered = data.filter(item=>(JSON.parse(item.column_values[0].value)).index == 105).map(item=>item.id);
     return itemsFiltered;
 }
-
+const isItemActiveOnChat = async (item_id)=>{
+    const metaInformationDB = new ChromeStorage('metaInformation');
+    const metaInformation = await metaInformationDB.GET();
+    const domain = metaInformation.domain;
+    const responseJSON = await fetch(`${domain}/vauto/isItemActiveOnChat`,{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            item_id,
+        }),
+    });
+    const response = await responseJSON.json();
+    return response;
+}
+const setAutomatedOfferMessage = async(data)=>{
+    const metaInformationDB = new ChromeStorage('metaInformation');
+    const metaInformation = await metaInformationDB.GET();
+    const domain = metaInformation.domain;
+    const responseJSON = await fetch(`${domain}/vauto/setAutomatedOfferMessage`,{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    });
+    const response = await responseJSON.json();
+    return response;
+};
 const popupSetup = async () => {
     console.log('popup');
     document.body.id ="POPUP";
@@ -1333,6 +1362,7 @@ const contentSetup = async () => {
         const mondayItemExits = await mondayItemDB.GET() != null;
         const consoleBoard = document.getElementById(fixedData.workingSelectors.content.console);
         if(!mondayItemExits){
+            
             console.log('no item in local db');
             let newItem = await serverResponse({directory:'getNewItemId'});
             // while(true){
@@ -1361,6 +1391,7 @@ const contentSetup = async () => {
             // console.log('item got from monday');
         }
         // 
+        console.log(await mondayItemDB.GET());
         await sleep(5000);
         window.onbeforeunload=null; 
         const overlay = document.getElementById('walkme-overlay-all');
@@ -1396,15 +1427,58 @@ const contentSetup = async () => {
             try{
                 appraisalResult =  await dynamicAppraisal(itemResult);
             }catch(e){
+                console.log(e);
                 consoleBoard.style.backgroundColor = 'red';
                 return false;
             }
+            
             console.log(appraisalResult);
+            const isItemActiveOnChatData = await isItemActiveOnChat(`${(await mondayItemDB.GET()).id}`);
+            if(isItemActiveOnChatData.status){
+                console.log('item belongs to chat');
+                if(appraisalResult.status=='Initial Offer' || appraisalResult.status=='Pass $'){
+                    const newStatusesAfetrAutomatedMessage = {
+                        'Initial Offer': 'MSG 1st Offer',
+                        'Pass $': 'Told To Pass'
+                    };
+                    let messageCode  = '';
+                    if(appraisalResult.status=='Initial Offer'){
+                        const localMondayItem = await mondayItemDB.GET();
+                        const item_price = localMondayItem['Price$'];
+                        const mmc_price = appraisalResult['MMC Offer$'];
+                        console.log(`item price: ${item_price}`);
+                        console.log(`mmc price: ${mmc_price}`);
+                        if(item_price-mmc_price<2500){
+                            messageCode = 'closeInitialOfferMessage';
+                        }else{
+                            messageCode = 'initialOfferMessage';
+                        }
+                    }else if(appraisalResult.status=='Pass $'){
+                        messageCode = 'pricePassMessage';
+                    }
+                    // change number into number with comma
+                    // appraisalResult['MMC Offer$'] = appraisalResult['MMC Offer$'].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    const setAutomatedOfferMessageResult = await setAutomatedOfferMessage({
+                        item_id: `${isItemActiveOnChatData.item_id}`,
+                        messageCode: messageCode,
+                        variables: {
+                            '[[MMC_OFFER]]': `${appraisalResult['MMC Offer$']}`.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","),
+                        }
+                    });
+                    console.log(setAutomatedOfferMessageResult);
+                    appraisalResult.status = newStatusesAfetrAutomatedMessage[appraisalResult.status];
+                    console.log('item belongs to chat and need auto offer message');
+                }else{
+                    console.log('this item is from chat but do not need auto offer');
+                }
+            }else{
+                console.log('this item is not from Chat');
+            }
+            // return null;
+            // 
             await updateItemToMonday(appraisalResult);
-            // const localVins = await mondayItemVinDB.GET();
-            // localVins.push(itemResult.vin);
-            // await mondayItemVinDB.SET(localVins);
             console.log('item updated');
+            
             if(!(appraisalResult.status =='Invalid Vin' || appraisalResult.status =='Manual')){
                 const appraisalPageActionButton = document.getElementById('ext-gen72');
                 appraisalPageActionButton.click();
