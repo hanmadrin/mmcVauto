@@ -1459,7 +1459,7 @@ const contentSetup = async () => {
                     // change number into number with comma
                     // appraisalResult['MMC Offer$'] = appraisalResult['MMC Offer$'].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                     const setAutomatedOfferMessageResult = await setAutomatedOfferMessage({
-                        item_id: `${isItemActiveOnChatData.item_id}`,
+                        item_id: `${(await mondayItemDB.GET()).id}`,
                         messageCode: messageCode,
                         variables: {
                             '[[MMC_OFFER]]': `${appraisalResult['MMC Offer$']}`.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","),
