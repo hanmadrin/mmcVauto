@@ -261,7 +261,7 @@ const dynamicAppraisal = async(info)=>{
         }
     }
     console.log('Ignoring if already appraised');
-    const ignoreDuplicate = document.getElementById('ext-comp-1080');
+    const ignoreDuplicate = document.querySelector('#ext-gen647 table[id].x-btn.v-btn-flat-primary.x-btn-noicon');
     if(ignoreDuplicate!=null){
         ignoreDuplicate.click();
         await sleep(2000);
