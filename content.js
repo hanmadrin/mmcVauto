@@ -261,7 +261,16 @@ const dynamicAppraisal = async(info)=>{
         }
     }
     console.log('Ignoring if already appraised');
-    const ignoreDuplicate = document.querySelector('#ext-gen647 table[id].x-btn.v-btn-flat-primary.x-btn-noicon');
+    const ignoreDuplicates = document.querySelectorAll('table[id].x-btn.v-btn-flat-primary.x-btn-noicon button');
+    let ignoreDuplicate = null;
+    for(let i=0;i<ignoreDuplicates.length;i++){
+        const ignoreDuplicateButton = ignoreDuplicates[i];
+        if(ignoreDuplicateButton.textContent.toLowerCase()=='ignore'){
+            ignoreDuplicate = ignoreDuplicateButton;
+            break;
+        }
+    }
+    console.log(ignoreDuplicate);
     if(ignoreDuplicate!=null){
         ignoreDuplicate.click();
         await sleep(2000);
