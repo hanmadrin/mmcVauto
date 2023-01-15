@@ -888,7 +888,7 @@ const dynamicAppraisal = async(info)=>{
             if(carfaxCheckValues.isOdometerRollback){
                 result = {
                     'updates': `${getEstDate()} ${carfaxCheckValues.updateText}-AUTO\nPossible Offer will be ${mmcOffer}-${mmcOffer+500}`,
-                    'status': 'Manual',
+                    'status': 'See My Note',
                     'MMC Offer$': `${mmcOffer}`,
                     'KBB Fair$' : `${kbbFairPrice}`,
                     'KBB TIV' : `${kbbTradeValue}`,
