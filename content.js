@@ -74,6 +74,58 @@ const calculateCertificationCost = (state)=>{
     return '1000';
 }
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const carfaxResults = async(vin)=>{
+    console.log('carfaxResults')
+    let accidentCount = 0;
+    let isTotalLoss = false;
+    let structuralDamageCount = 0;
+    let isAirbagDeployed = false;
+    let isOdometerRollback = false;
+    let brands = [];
+    const carfax = await fetch(`https://www.carfaxonline.com/cfm/Display_Dealer_Report.cfm?partner=VAU_0&UID=D32338803&vin=${vin}`);
+    const html = await carfax.text();
+    var parser = new DOMParser();
+    const carfaxDocument = parser.parseFromString(html, "text/html");
+    const carfaxVin = carfaxDocument.querySelector('#headerVin');
+    if(carfaxVin==null){
+        console.log('carfax is having issue for this vin');
+        return null;
+    }else{
+        if(!carfaxVin.innerText.toLowerCase().includes(vin.toLowerCase())){
+            console.log('carfax vin not found');
+            return null;
+        }
+    }
+    const additionalInfoTable = carfaxDocument.querySelector('#otherInformationTable');
+    
+    const totalLossInfo = additionalInfoTable.querySelector('tr:nth-child(2) td:first-child div').innerText;
+    isTotalLoss = !totalLossInfo.toLowerCase().includes('no total loss reported');
+    
+    const structuralDamageInfo = additionalInfoTable.querySelector('tr:nth-child(3) td:first-child div').innerText;
+    const structuralDamageDates = structuralDamageInfo.match(/\d{2}\/\d{2}\/\d{4}/g)||[];
+    structuralDamageCount = structuralDamageDates.length;
+    
+    const airbagDeploymentInfo = additionalInfoTable.querySelector('tr:nth-child(4) td:first-child div').innerText;
+    isAirbagDeployed = !airbagDeploymentInfo.toLowerCase().includes('no airbag deployment reported');
+
+    const odometerRollbackInfo = additionalInfoTable.querySelector('tr:nth-child(5) td:first-child div').innerText;
+    isOdometerRollback = !odometerRollbackInfo.toLowerCase().includes('no indication of an odometer rollback');
+
+    const accidentInfo = additionalInfoTable.querySelector('tr:nth-child(6) td:first-child div').innerText;
+    const accidentDates = accidentInfo.split('.').filter(a=>!a.includes('repairs')).join('.').match(/\d{2}\/\d{2}\/\d{4}/g)||[];
+    accidentCount = accidentDates.filter(a=>!structuralDamageDates.includes(a)).length + structuralDamageCount;
+
+    const updateText = (isTotalLoss?`Total Loss Reported`:'') + (structuralDamageCount>0?`\n${structuralDamageCount} Structural Damage Reported`:'') + (isAirbagDeployed?`\nAirbag Deployed`:'') + (isOdometerRollback?`\nInconsistent Mileage Indicated`:'') + (accidentCount>0?`\n${accidentCount} Accident Counted`:'');
+
+    return {
+        accidentCount,
+        isTotalLoss,
+        structuralDamageCount,
+        isAirbagDeployed,
+        isOdometerRollback,
+        updateText
+    }
+};
 const autocheckResults = async(vin)=>{
     let accidentCount = 0;
     let brands = [];
@@ -786,16 +838,16 @@ const dynamicAppraisal = async(info)=>{
     await sleep(5000);
 
     //accident count- All titles - Appraised Value  -  Seller price 
-    let autocheckValues = await autocheckResults(vin);
-    if(autocheckValues==null){
+    let carfaxCheckValues = await carfaxResults(vin);
+    if(carfaxCheckValues==null){
         await sleep(5000);
-        autocheckValues = await autocheckResults(vin);
+        carfaxCheckValues = await carfaxResults(vin);
     }
-    if(autocheckValues==null){
+    if(carfaxCheckValues==null){
         await sleep(5000);
-        autocheckValues = await autocheckResults(vin);
+        carfaxCheckValues = await carfaxResults(vin);
     }
-    if(autocheckValues==null){
+    if(carfaxCheckValues==null){
         return {
             'updates': `-Manual- Couldn't get autocheck values`,
             'status': 'Manual',
@@ -809,9 +861,9 @@ const dynamicAppraisal = async(info)=>{
         mmcOffer = Math.floor((sellerPrice-2000)/500)*500;
     }
     let result = {};
-    if(autocheckValues.accidentCount>=2){
+    if(carfaxCheckValues.accidentCount>=2 || carfaxCheckValues.isAirbagDeployed || carfaxCheckValues.isTotalLoss){
         result = {
-            'updates': `-PASS- ${autocheckValues.accidentCount} accident`,
+            'updates': `AUTO\n-PASS- ${carfaxCheckValues.updateText}`,
             'status': 'Pass',
             'MMC Offer$': `${mmcOffer}`,
             'KBB Fair$' : `${kbbFairPrice}`,
@@ -821,9 +873,9 @@ const dynamicAppraisal = async(info)=>{
             'Ave $ MMR': `${mmrPriceValue}`,
         };
     }else{
-        if(autocheckValues.accidentCount==1 && sellerPrice>15000){
+        if(carfaxCheckValues.accidentCount==1 && sellerPrice>15000){
             result = {
-                'updates': `${getEstDate()}-PASS- One accident and seller asking ${sellerPrice}-AUTO`,
+                'updates': `${getEstDate()}-PASS- One accident and seller asking ${sellerPrice}\n ${carfaxCheckValues.updateText}`,
                 'MMC Offer$': `${mmcOffer}`,
                 'KBB Fair$' : `${kbbFairPrice}`,
                 'KBB TIV' : `${kbbTradeValue}`,
@@ -833,10 +885,10 @@ const dynamicAppraisal = async(info)=>{
                 'status': 'Pass'
             };
         }else{
-            if(autocheckValues.brands.length>0){
+            if(carfaxCheckValues.isOdometerRollback){
                 result = {
-                    'updates': `${getEstDate()}-PASS- ${autocheckValues.brands.join(',\n ')}-AUTO\nPossible Offer will be ${mmcOffer}-${mmcOffer+500}`,
-                    'status': 'Pass',
+                    'updates': `${getEstDate()} ${carfaxCheckValues.updateText}-AUTO\nPossible Offer will be ${mmcOffer}-${mmcOffer+500}`,
+                    'status': 'Manual',
                     'MMC Offer$': `${mmcOffer}`,
                     'KBB Fair$' : `${kbbFairPrice}`,
                     'KBB TIV' : `${kbbTradeValue}`,
@@ -936,7 +988,7 @@ const mondayFetch = async (query) => {
             },
             body: JSON.stringify({query})
         }
-    );
+    );  
     return await mondayResponse.json();
 }
 const getItemFromMonday = async (item_id) => {
@@ -1337,6 +1389,11 @@ const contentSetup = async () => {
     //         await mondayItemVinDB.SET([]);
     //     }
     // }
+    // const a = await carfaxResults('5NPE24AF3KH747821');
+    // console.log(a.updateText);
+    // return 0;
+
+
 
     await sleep(2000);
     console.log(pageByUrl());
@@ -1534,6 +1591,7 @@ const backgroundSetup = async () => {
     await mondayItemVinDB.SET([]);
     const db2 = await mondayItemDB.GET();
     console.log(db2);
+    // await carfaxResults('KNAFX4A64G5500818');
 };
 (async ()=>{
     if(typeof window=== 'undefined'){
