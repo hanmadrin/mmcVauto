@@ -839,13 +839,17 @@ const dynamicAppraisal = async(info)=>{
 
     //accident count- All titles - Appraised Value  -  Seller price 
     let carfaxCheckValues = await carfaxResults(vin);
+    console.log(carfaxCheckValues);
     if(carfaxCheckValues==null){
         await sleep(5000);
         carfaxCheckValues = await carfaxResults(vin);
+        console.log(carfaxCheckValues);
+
     }
     if(carfaxCheckValues==null){
         await sleep(5000);
         carfaxCheckValues = await carfaxResults(vin);
+        console.log(carfaxCheckValues);
     }
     if(carfaxCheckValues==null){
         return {
