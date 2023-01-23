@@ -616,7 +616,7 @@ const dynamicAppraisal = async(info)=>{
     console.log('choosing kbb good condition');
     const kbbConditions = document.querySelectorAll('#ext-gen424 .optionField .options ul.optionList li a');
     for(let i=0;i<kbbConditions.length;i++){
-        if(kbbConditions[i].textContent=='Good'){
+        if(kbbConditions[i].textContent=='Very Good'){
             kbbConditions[i].click();
             await sleep(5000);
             break;
