@@ -976,7 +976,8 @@ const validItemTitlesId = {
     // 'BOT Status':'text76',
 };
 const globalData = {
-    boardId: '1255820475'
+    boardId: '1255820475',
+    borEffortBoardId: '1250230293',
     // boardId: '2886859118'
 }
 const mondayFetch = async (query) => {
@@ -1118,6 +1119,50 @@ const updateItemToMonday = async(updateData)=>{
         await mondayFetch(updateColumnQuery);
     }
 }
+const collectNewMessageFromChat = async () => {
+    const popupMetaDB = new ChromeStorage('metaInformation');
+    const popupMeta = await popupMetaDB.GET();
+    const domain = popupMeta.domain;
+    const dashBoardDataJson = await fetch(`${domain}/vauto/getDashBoardData`,{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+    const dashBoardData = await dashBoardDataJson.json();
+    const fb_ids = dashBoardData.map((item)=>item.fb_id);
+    const sellerRepliedItemId = {};
+    for(let i = 0; i < dashBoardData.length; i++){
+        const item = dashBoardData[i];
+        const fb_id = item.fb_id;
+        sellerRepliedItemId[fb_id] = item.sellerReplies;
+        item.sellerReplies = 0;
+    }
+    const sellerRepliedItemIds = [];
+    for(const fb_id in sellerRepliedItemId){
+        sellerRepliedItemIds.push(...sellerRepliedItemId[fb_id]);
+    }
+    const query = `
+            query{
+                boards(ids:[${globalData.borEffortBoardId}]){
+                    items(limit:1000,ids:[${sellerRepliedItemIds.map(id=>`${id}`)}]){
+                        id
+                    }
+                }
+            }
+        `;
+    const mondayItemsData = await mondayFetch(query);
+    // const mondayItemsdata = await mondayItemsDataJson.json();
+    const activeSellerRepliedItemIds = mondayItemsData.data.boards[0].items.map(item=>item.id);
+    console.log(activeSellerRepliedItemIds);
+    await fetch(`${domain}/vauto/collectedNewMessageFromChat`,{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+    // await sleep(100000);
+};
 const calculateMondayItemRawVin = async () => {
     const result = {};
     const mondayItem = await mondayItemDB.GET();
@@ -1453,6 +1498,7 @@ const contentSetup = async () => {
                 // consoleBoard.style.backgroundColor = 'yellow';
                 const item_ids = await getAutoVinIds();
                 const response = await serverResponse({directory:'uploadNewItems',item_ids});
+                await collectNewMessageFromChat();
                 window.location.reload();
             }
                 // await sleep(1000);

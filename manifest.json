@@ -8,8 +8,7 @@
         "storage",
         "unlimitedStorage",
         "tabs",
-        "cookies",
-        "https://www.carfaxonline.com/*"
+        "cookies"
     ],
     "host_permissions": [
         "https://www.carfaxonline.com/*"
