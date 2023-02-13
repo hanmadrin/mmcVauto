@@ -1155,12 +1155,15 @@ const collectNewMessageFromChat = async () => {
     // const mondayItemsdata = await mondayItemsDataJson.json();
     const activeSellerRepliedItemIds = mondayItemsData.data.boards[0].items.map(item=>item.id);
     console.log(activeSellerRepliedItemIds);
-    await fetch(`${domain}/vauto/collectedNewMessageFromChat`,{
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });
+    if(activeSellerRepliedItemIds.length>0){
+        await fetch(`${domain}/vauto/collectedNewMessageFromChat`,{
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    }
+    
     // await sleep(100000);
 };
 const calculateMondayItemRawVin = async () => {
