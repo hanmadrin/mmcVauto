@@ -86,7 +86,7 @@ const carfaxResults = async(vin)=>{
     const html = await carfax.text();
     var parser = new DOMParser();
     const carfaxDocument = parser.parseFromString(html, "text/html");
-    const carfaxVin = carfaxDocument.querySelector('#headerVin');
+    const carfaxVin = carfaxDocument.querySelector('#headerVin,.sidebar-vehicle-information-vin,#vehicle-information-panel');
     if(carfaxVin==null){
         console.log('carfax is having issue for this vin');
         return null;
@@ -96,22 +96,22 @@ const carfaxResults = async(vin)=>{
             return null;
         }
     }
-    const additionalInfoTable = carfaxDocument.querySelector('#otherInformationTable');
+    const additionalInfoTable = carfaxDocument.querySelector('#otherInformationTable,#additional-history-section');
     
-    const totalLossInfo = additionalInfoTable.querySelector('tr:nth-child(2) td:first-child div').innerText;
+    const totalLossInfo = additionalInfoTable.querySelector('#total-loss,tr:nth-child(2) td:first-child div').innerText;
     isTotalLoss = !totalLossInfo.toLowerCase().includes('no total loss reported');
     
-    const structuralDamageInfo = additionalInfoTable.querySelector('tr:nth-child(3) td:first-child div').innerText;
+    const structuralDamageInfo = additionalInfoTable.querySelector('#structural-damage,tr:nth-child(3) td:first-child div').innerText;
     const structuralDamageDates = structuralDamageInfo.match(/\d{2}\/\d{2}\/\d{4}/g)||[];
     structuralDamageCount = structuralDamageDates.length;
     
-    const airbagDeploymentInfo = additionalInfoTable.querySelector('tr:nth-child(4) td:first-child div').innerText;
+    const airbagDeploymentInfo = additionalInfoTable.querySelector('#airbag-deployment,tr:nth-child(4) td:first-child div').innerText;
     isAirbagDeployed = !airbagDeploymentInfo.toLowerCase().includes('no airbag deployment reported');
 
-    const odometerRollbackInfo = additionalInfoTable.querySelector('tr:nth-child(5) td:first-child div').innerText;
+    const odometerRollbackInfo = additionalInfoTable.querySelector('#odometer-check,tr:nth-child(5) td:first-child div').innerText;
     isOdometerRollback = !odometerRollbackInfo.toLowerCase().includes('no indication of an odometer rollback');
 
-    const accidentInfo = additionalInfoTable.querySelector('tr:nth-child(6) td:first-child div').innerText;
+    const accidentInfo = additionalInfoTable.querySelector('#accident-damage,tr:nth-child(6) td:first-child div').innerText;
     const accidentDates = accidentInfo.split('.').filter(a=>!a.includes('repairs')).join('.').match(/\d{2}\/\d{2}\/\d{4}/g)||[];
     accidentCount = accidentDates.filter(a=>!structuralDamageDates.includes(a)).length + structuralDamageCount;
 
