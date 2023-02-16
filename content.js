@@ -74,7 +74,8 @@ const calculateCertificationCost = (state)=>{
     return '1000';
 }
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-const carfaxResults = async(vin)=>{
+const carfaxResults = async(vin,sellerPrice)=>{
+    
     console.log('carfaxResults')
     let accidentCount = 0;
     let isTotalLoss = false;
@@ -82,6 +83,17 @@ const carfaxResults = async(vin)=>{
     let isAirbagDeployed = false;
     let isOdometerRollback = false;
     let brands = [];
+    if((document.querySelector('#carfaxButton.x-carfax-problem') || document.querySelector('#carfaxButton.x-carfax-warning')) && sellerPrice>15000){
+        console.log('warning or error sign on vauto');
+        return {
+            accidentCount:1,
+            isTotalLoss,
+            structuralDamageCount,
+            isAirbagDeployed,
+            isOdometerRollback,
+            updateText:'Had warning or Error sign on Vauto For carfax',
+        }
+    }
     const carfax = await fetch(`https://www.carfaxonline.com/cfm/Display_Dealer_Report.cfm?partner=VAU_0&UID=D32338803&vin=${vin}`);
     const html = await carfax.text();
     var parser = new DOMParser();
@@ -838,17 +850,17 @@ const dynamicAppraisal = async(info)=>{
     await sleep(5000);
 
     //accident count- All titles - Appraised Value  -  Seller price 
-    let carfaxCheckValues = await carfaxResults(vin);
+    let carfaxCheckValues = await carfaxResults(vin,sellerPrice);
     console.log(carfaxCheckValues);
     if(carfaxCheckValues==null){
         await sleep(5000);
-        carfaxCheckValues = await carfaxResults(vin);
+        carfaxCheckValues = await carfaxResults(vin,sellerPrice);
         console.log(carfaxCheckValues);
 
     }
     if(carfaxCheckValues==null){
         await sleep(5000);
-        carfaxCheckValues = await carfaxResults(vin);
+        carfaxCheckValues = await carfaxResults(vin,sellerPrice);
         console.log(carfaxCheckValues);
     }
     if(carfaxCheckValues==null){
